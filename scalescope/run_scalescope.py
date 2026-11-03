@@ -50,7 +50,7 @@ from scalescope.memory_model import (
     LayerMemoryTraffic,
     MemoryFootprint,
 )
-from scalescope.model_spec import TransformerConfig
+from scalescope.model_spec import kv_heads_per_tp_rank, TransformerConfig
 from scalescope.pp_strategy import get_pp_strategy
 from scalescope.spec_utils import (
     convert_sweep_values,
@@ -898,7 +898,7 @@ def get_model_stats(
         else:
             assert isinstance(workload_spec, InferenceDecodeSpec)
             kv_len = workload_spec.prefill_seq_len + workload_spec.num_generated_tokens
-        kv_heads_sharded = num_kv_heads // attn_tp_size
+        kv_heads_sharded = kv_heads_per_tp_rank(num_kv_heads, attn_tp_size)
         kv_bytes_per_layer_per_xpu = (
             2
             * batch_size_per_dp

@@ -179,6 +179,19 @@ class TransformerConfig(BaseModel):
             raise ValueError(f"Error loading {cls.__name__} spec from '{filepath}': {e}") from e
 
 
+def kv_heads_per_tp_rank(num_kv_heads: int, tp_size: int) -> int:
+    """
+    Returns the number of KV heads held by one rank of an attention TP group.
+
+    With GQA/MQA the TP degree can exceed the number of KV heads (e.g. 8 KV heads on
+    TP=16). KV heads are then replicated across ranks rather than split, so every rank
+    still holds at least one KV head and its share of the KV cache.
+    """
+    if tp_size <= 0:
+        raise ValueError("TP size must be >= 1")
+    return -(-num_kv_heads // tp_size)
+
+
 def attn_params_per_xpu(transformer_config: TransformerConfig, tp_topology) -> int:
     """
     Returns per-layer parameter count on a single XPU for the attention path.

@@ -12,6 +12,7 @@ from typing import Any, Dict
 from scalescope.model_spec import (
     attn_params_per_xpu,
     expert_params_per_xpu,
+    kv_heads_per_tp_rank,
     TransformerConfig,
 )
 from scalescope.utils import PassMode
@@ -565,7 +566,7 @@ def _forward_pass_prefill_attention_memory_traffic(
 
     # Calculate sharded dimensions
     num_q_heads_sharded = num_heads // attn_tp_size
-    num_kv_heads_sharded = num_kv_heads // attn_tp_size
+    num_kv_heads_sharded = kv_heads_per_tp_rank(num_kv_heads, attn_tp_size)
 
     # Infer sizes from workload spec
     n_batch = workload_spec.get_resolved_batches().batch_size_per_dp
@@ -654,7 +655,7 @@ def _decode_attention_memory_traffic(
 
     # Calculate sharded dimensions
     num_q_heads_sharded = num_heads // attn_tp_size
-    num_kv_heads_sharded = num_kv_heads // attn_tp_size
+    num_kv_heads_sharded = kv_heads_per_tp_rank(num_kv_heads, attn_tp_size)
 
     # Infer sizes from workload spec
     n_batch = workload_spec.get_resolved_batches().batch_size_per_dp
@@ -812,7 +813,9 @@ def _forward_pass_2d_attention_memory_traffic(
 
     head_dim = d_model // num_heads
     heads_per_x = num_heads // attn_tp_size_x if attn_tp_size_x else num_heads
-    kv_heads_per_x = num_kv_heads // attn_tp_size_x if attn_tp_size_x else num_kv_heads
+    kv_heads_per_x = (
+        kv_heads_per_tp_rank(num_kv_heads, attn_tp_size_x) if attn_tp_size_x else num_kv_heads
+    )
 
     step_seq = 1 if pass_mode == PassMode.INFERENCE_DECODE else n_seq
 
